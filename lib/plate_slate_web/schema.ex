@@ -1,13 +1,15 @@
 defmodule PlateSlateWeb.Schema do
   use Absinthe.Schema
   alias PlateSlate.{Repo, Menu}
+  alias PlateSlateWeb.Resolvers
 
   query do
     @desc "The list of available items on the menu"
     field(:menu_items, list_of(:menu_item)) do
-      resolve(fn _, _, _ ->
-        {:ok, Repo.all(Menu.Item)}
-      end)
+      @desc "Matches the provided string anywhere in the item name"
+      arg(:matching, :string)
+
+      resolve(&Resolvers.Menu.menu_items/3)
     end
   end
 
