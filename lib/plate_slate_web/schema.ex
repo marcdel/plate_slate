@@ -1,6 +1,5 @@
 defmodule PlateSlateWeb.Schema do
   use Absinthe.Schema
-  alias PlateSlate.{Repo, Menu}
   alias PlateSlateWeb.Resolvers
 
   query do
@@ -13,6 +12,21 @@ defmodule PlateSlateWeb.Schema do
 
       resolve(&Resolvers.Menu.menu_items/3)
     end
+  end
+
+  scalar :date do
+    parse(fn input ->
+      with %Absinthe.Blueprint.Input.String{value: value} <- input,
+           {:ok, date} <- Date.from_iso8601(value) do
+        {:ok, date}
+      else
+        _ -> :error
+      end
+    end)
+
+    serialize(fn date ->
+      Date.to_iso8601(date)
+    end)
   end
 
   enum :sort_order do
@@ -36,6 +50,12 @@ defmodule PlateSlateWeb.Schema do
 
     @desc "Priced below a value"
     field(:priced_below, :float)
+
+    @desc "Added before a date"
+    field(:added_before, :date)
+
+    @desc "Added after a date"
+    field(:added_after, :date)
   end
 
   @desc "An item on the menu"
@@ -48,6 +68,9 @@ defmodule PlateSlateWeb.Schema do
 
     @desc "A description of the item"
     field(:description, :string)
+
+    @desc "The date the item was added on"
+    field(:added_on, :date)
 
     @desc "The decimal price of the item (ex: 4.5)"
     field(:price, :float)

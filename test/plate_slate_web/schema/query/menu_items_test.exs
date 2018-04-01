@@ -209,6 +209,55 @@ defmodule PlateSlateWeb.Schema.Query.MenuItemsTest do
     assert items == [%{"name" => "Vada Pav"}]
   end
 
+  @query """
+  query ($filter: MenuItemFilter!) {
+    menuItems(filter: $filter) {
+      name
+      addedOn
+    }
+  }
+  """
+  @variables %{filter: %{"addedBefore" => "2017-01-20"}}
+  test "menuItems filtered by custom scalar" do
+    sides = PlateSlate.Repo.get_by!(PlateSlate.Menu.Category, name: "Sides")
+    %PlateSlate.Menu.Item{
+      name: "Garlic Fries",
+      added_on: ~D[2017-01-01],
+      price: 2.50,
+      category: sides
+    } |> PlateSlate.Repo.insert!
+
+    items =
+      build_conn()
+      |> get("/api", query: @query, variables: @variables)
+      |> json_response(200)
+      |> menu_items_from_response()
+
+    assert items == [%{"name" => "Garlic Fries", "addedOn" => "2017-01-01"}]
+  end
+
+  @query """
+  query ($filter: MenuItemFilter!) {
+    menuItems(filter: $filter) {
+      name
+    }
+  }
+  """
+  @variables %{filter: %{"addedBefore" => "not-a-date"}}
+  test "menuItems filtered by custom scalar with error" do
+    response = get(build_conn(), "/api", query: @query, variables: @variables)
+
+    assert %{"errors" => [%{"locations" => [
+      %{"column" => 0, "line" => 2}], "message" => message}
+    ]} = json_response(response, 400)
+
+    expected = """
+    Argument "filter" has invalid value $filter.
+    In field "addedBefore": Expected type "Date", found "not-a-date".\
+    """
+    assert expected == message
+  end
+
   defp menu_items_from_response(response) do
     %{"data" => %{"menuItems" => items}} = response
 
